@@ -48,9 +48,9 @@ struct relation_t {
 	certificate_t *issuer;
 
 	/**
-	 * Signature scheme used to sign this relation
+	 * Signature scheme and parameters used to sign this relation
 	 */
-	signature_scheme_t scheme;
+	signature_params_t *scheme;
 
 	/**
 	 * Cache hits
@@ -84,7 +84,7 @@ struct private_cert_cache_t {
  */
 static void cache(private_cert_cache_t *this,
 				  certificate_t *subject, certificate_t *issuer,
-				  signature_scheme_t scheme)
+				  signature_params_t *scheme)
 {
 	relation_t *rel;
 	int i, offset, try;
@@ -118,7 +118,7 @@ static void cache(private_cert_cache_t *this,
 					{
 						rel->subject->destroy(rel->subject);
 						rel->subject = subject->get_ref(subject);
-						rel->scheme = scheme;
+						rel->scheme = signature_params_clone(scheme);
 						return rel->lock->unlock(rel->lock);
 					}
 				}
@@ -139,7 +139,7 @@ static void cache(private_cert_cache_t *this,
 			{
 				rel->subject = subject->get_ref(subject);
 				rel->issuer = issuer->get_ref(issuer);
-				rel->scheme = scheme;
+				rel->scheme = signature_params_clone(scheme);
 				return rel->lock->unlock(rel->lock);
 			}
 			rel->lock->unlock(rel->lock);
@@ -168,7 +168,7 @@ static void cache(private_cert_cache_t *this,
 				}
 				rel->subject = subject->get_ref(subject);
 				rel->issuer = issuer->get_ref(issuer);
-				rel->scheme = scheme;
+				rel->scheme = signature_params_clone(scheme);
 				rel->hits = 0;
 				return rel->lock->unlock(rel->lock);
 			}
@@ -180,11 +180,11 @@ static void cache(private_cert_cache_t *this,
 
 METHOD(cert_cache_t, issued_by, bool,
 	private_cert_cache_t *this, certificate_t *subject, certificate_t *issuer,
-	signature_scheme_t *schemep)
+	signature_params_t **schemep)
 {
 	certificate_t *cached_issuer = NULL;
 	relation_t *found = NULL, *current;
-	signature_scheme_t scheme;
+	signature_params_t *scheme;
 	int i;
 
 	for (i = 0; i < CACHE_SIZE; i++)
@@ -202,7 +202,7 @@ METHOD(cert_cache_t, issued_by, bool,
 					found = current;
 					if (schemep)
 					{
-						*schemep = current->scheme;
+						*schemep = signature_params_clone(current->scheme);
 					}
 				}
 				else if (!cached_issuer)
@@ -224,6 +224,10 @@ METHOD(cert_cache_t, issued_by, bool,
 		if (schemep)
 		{
 			*schemep = scheme;
+		}
+		else
+		{
+			signature_params_destroy(scheme);
 		}
 		DESTROY_IF(cached_issuer);
 		return TRUE;
