@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
  * Copyright (C) 2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
@@ -32,7 +32,7 @@ ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_XAUTH,
 	"XAuth",
 );
 
-ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_AC_CERT,
+ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_RADIUS_CLASS,
 	"RULE_IDENTITY",
 	"RULE_IDENTITY_LOOSE",
 	"RULE_AUTH_CLASS",
@@ -61,6 +61,7 @@ ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_AC_CERT,
 	"HELPER_SUBJECT_HASH_URL",
 	"HELPER_REVOCATION_CERT",
 	"HELPER_AC_CERT",
+	"HELPER_RADIUS_CLASS",
 );
 
 /**
@@ -100,6 +101,7 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_REVOCATION_CERT:
 		case AUTH_HELPER_AC_CERT:
+		case AUTH_HELPER_RADIUS_CLASS:
 			return TRUE;
 	}
 	return FALSE;
@@ -238,6 +240,7 @@ static void init_entry(entry_t *this, auth_rule_t type, va_list args)
 		case AUTH_HELPER_SUBJECT_HASH_URL:
 		case AUTH_HELPER_REVOCATION_CERT:
 		case AUTH_HELPER_AC_CERT:
+		case AUTH_HELPER_RADIUS_CLASS:
 			/* pointer type */
 			this->value = va_arg(args, void*);
 			break;
@@ -293,6 +296,7 @@ static bool entry_equals(entry_t *e1, entry_t *e2)
 		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_XAUTH_IDENTITY:
 		case AUTH_RULE_GROUP:
+		case AUTH_HELPER_RADIUS_CLASS:
 		{
 			identification_t *id1, *id2;
 
@@ -326,6 +330,7 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_GROUP:
 		case AUTH_RULE_XAUTH_IDENTITY:
+		case AUTH_HELPER_RADIUS_CLASS:
 		{
 			identification_t *id = (identification_t*)entry->value;
 			id->destroy(id);
@@ -416,6 +421,7 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_HELPER_SUBJECT_HASH_URL:
 			case AUTH_HELPER_REVOCATION_CERT:
 			case AUTH_HELPER_AC_CERT:
+			case AUTH_HELPER_RADIUS_CLASS:
 				/* pointer type */
 				entry->value = va_arg(args, void*);
 				break;
@@ -497,6 +503,7 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_HELPER_SUBJECT_HASH_URL:
 		case AUTH_HELPER_REVOCATION_CERT:
 		case AUTH_HELPER_AC_CERT:
+		case AUTH_HELPER_RADIUS_CLASS:
 		case AUTH_RULE_MAX:
 			break;
 	}
@@ -970,6 +977,7 @@ METHOD(auth_cfg_t, complies, bool,
 			case AUTH_HELPER_SUBJECT_HASH_URL:
 			case AUTH_HELPER_REVOCATION_CERT:
 			case AUTH_HELPER_AC_CERT:
+			case AUTH_HELPER_RADIUS_CLASS:
 			case AUTH_RULE_MAX:
 				/* skip helpers */
 				continue;
@@ -1126,6 +1134,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_AAA_IDENTITY:
 				case AUTH_RULE_GROUP:
 				case AUTH_RULE_XAUTH_IDENTITY:
+				case AUTH_HELPER_RADIUS_CLASS:
 				{
 					identification_t *id = (identification_t*)value;
 
@@ -1252,6 +1261,7 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_RULE_AAA_IDENTITY:
 			case AUTH_RULE_GROUP:
 			case AUTH_RULE_XAUTH_IDENTITY:
+			case AUTH_HELPER_RADIUS_CLASS:
 			{
 				identification_t *id = (identification_t*)value;
 				clone->add(clone, type, id->clone(id));

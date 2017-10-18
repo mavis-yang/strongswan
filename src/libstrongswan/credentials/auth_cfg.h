@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -125,6 +125,8 @@ enum auth_rule_t {
 	AUTH_HELPER_REVOCATION_CERT,
 	/** attribute certificate for authorization decisions, certificate_t */
 	AUTH_HELPER_AC_CERT,
+	/** RADIUS class attribute, identification_t* */
+	AUTH_HELPER_RADIUS_CLASS,
 
 	/** helper to determine the number of elements in this enum */
 	AUTH_RULE_MAX,
