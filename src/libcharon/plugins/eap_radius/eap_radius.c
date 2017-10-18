@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -277,7 +278,11 @@ static void process_class(radius_message_t *msg)
 {
 	enumerator_t *enumerator;
 	chunk_t data;
+	bool class_group;
 	int type;
+
+	class_group = lib->settings->get_bool(lib->settings,
+						"%s.plugins.eap-radius.class_group", FALSE, lib->ns);
 
 	enumerator = msg->create_enumerator(msg);
 	while (enumerator->enumerate(enumerator, &type, &data))
@@ -288,19 +293,19 @@ static void process_class(radius_message_t *msg)
 			ike_sa_t *ike_sa;
 			auth_cfg_t *auth;
 
-			if (data.len >= 44)
-			{	/* quirk: ignore long class attributes, these are used for
-				 * other purposes by some RADIUS servers (such as NPS). */
-				continue;
-			}
-
 			ike_sa = charon->bus->get_sa(charon->bus);
 			if (ike_sa)
 			{
 				auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
 				id = identification_create_from_data(data);
-				DBG1(DBG_CFG, "received group membership '%Y' from RADIUS", id);
-				auth->add(auth, AUTH_RULE_GROUP, id);
+				if (class_group && data.len < 44)
+				{	/* quirk: ignore long class attributes, these are used for
+					 * other purposes by some RADIUS servers (such as NPS). */
+					DBG1(DBG_CFG, "received group membership '%Y' from RADIUS",
+						 id);
+					auth->add(auth, AUTH_RULE_GROUP, id->clone(id));
+				}
+				auth->add(auth, AUTH_HELPER_RADIUS_CLASS, id);
 			}
 		}
 	}
@@ -631,11 +636,7 @@ static void process_cfg_attributes(radius_message_t *msg)
  */
 void eap_radius_process_attributes(radius_message_t *message)
 {
-	if (lib->settings->get_bool(lib->settings,
-						"%s.plugins.eap-radius.class_group", FALSE, lib->ns))
-	{
-		process_class(message);
-	}
+	process_class(message);
 	if (lib->settings->get_bool(lib->settings,
 						"%s.plugins.eap-radius.filter_id", FALSE, lib->ns))
 	{

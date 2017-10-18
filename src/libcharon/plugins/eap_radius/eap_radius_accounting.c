@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2015-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
@@ -393,6 +393,36 @@ static bool send_message(private_eap_radius_accounting_t *this,
 }
 
 /**
+ * Add the first class attribute of the last EAP authentiation round to the
+ * RADIUS accounting message
+ */
+static void add_class_attribute(radius_message_t *message, ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	auth_cfg_t *cfg;
+	identification_t *current, *class = NULL;
+	char buf[MAX_RADIUS_ATTRIBUTE_SIZE + 1];
+
+	enumerator = ike_sa->create_auth_cfg_enumerator(ike_sa, FALSE);
+	while (enumerator->enumerate(enumerator, &cfg))
+	{
+		/* prefer class attribute of last round */
+		current = cfg->get(cfg, AUTH_HELPER_RADIUS_CLASS);
+		if (current && current->get_type(current) != ID_ANY)
+		{
+			class = current;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (class)
+	{
+		snprintf(buf, sizeof(buf), "%Y", class);
+		message->add(message, RAT_CLASS, chunk_from_str(buf));
+	}
+}
+
+/**
  * Add common IKE_SA parameters to RADIUS account message
  */
 static void add_ike_sa_parameters(private_eap_radius_accounting_t *this,
@@ -436,6 +466,8 @@ static void add_ike_sa_parameters(private_eap_radius_accounting_t *this,
 
 	snprintf(buf, sizeof(buf), "%Y", ike_sa->get_other_eap_id(ike_sa));
 	message->add(message, RAT_USER_NAME, chunk_from_str(buf));
+
+	add_class_attribute(message, ike_sa);
 
 	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, FALSE);
 	while (enumerator->enumerate(enumerator, &vip))
